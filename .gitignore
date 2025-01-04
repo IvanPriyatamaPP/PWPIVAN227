@@ -3,3 +3,4 @@ venv
 app/config.py
 migrations/
 token_generator
+app/__pycache__
