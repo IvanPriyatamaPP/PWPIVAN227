@@ -1,4 +1,5 @@
 .env
-token_generator
 venv
-app/config
+app/config.py
+migrations
+token_generator
