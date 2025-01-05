@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Pengguna</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edit_user.css') }}">
+</head>
+<body>
+    <div class="edit-container">
+        <h1>Edit Pengguna</h1>
+        
+        <form method="POST" action="{{ url_for('main.edit_user', id=user.id) }}">
+            <label for="username">Username</label>
+            <input type="text" name="username" value="{{ user.username }}" required><br>
+
+            <label for="email">Email</label>
+            <input type="email" name="email" value="{{ user.email }}" required><br>
+
+            <label for="password">Password (Opsional)</label>
+            <input type="password" name="password"><br>
+
+            <label for="role">Role</label>
+            <input type="text" name="role" value="{{ user.role }}" required><br>
+
+            <button type="submit">Update Pengguna</button>
+        </form>
+
+        <a href="{{ url_for('main.dashboard') }}" class="back-btn">Kembali ke Dashboard</a>
+    </div>
+</body>
+</html>

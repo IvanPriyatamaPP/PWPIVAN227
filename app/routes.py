@@ -1,59 +1,130 @@
-from flask import Blueprint, jsonify, request, render_template
-from . import db
-from .models import User
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+from .models import User, db
 
 main = Blueprint('main', __name__)
 
+def is_logged_in():
+    return 'user_id' in session
+
 @main.route('/')
 def index():
-    render_template('base.html')    
-@main.route('/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not username or not email or not password:
-        return jsonify({'error':"Data gabisa kosong"}), 404
-    
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
-        return jsonify({'error':"Data Duplikat"}), 404
-    
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-    
-    return jsonify({'message':"Data Created"}), 201
-    
-   # Endpoint untuk login dan menghasilkan JWT
-@main.route('/login', methods=['POST'])
+    return render_template('index.html')
+
+@main.route('/login', methods=['GET', 'POST'])
 def login():
-    data = request.get_json()
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
 
-    email = data.get('email')
-    password = data.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            session['user_id'] = user.id  
+            return redirect(url_for('main.dashboard'))
+        else:
+            flash('Email atau password salah', 'error')
+            return redirect(url_for('main.login'))
 
-    if not email or not password:
-        return jsonify({"message": "Email and password are required"}), 400
+    return render_template('login.html')
 
-    user = User.query.filter_by(email=email).first()
+@main.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        role = request.form.get('role')
 
-    if not user or not user.check_password(password):
-        return jsonify({"message": "Invalid credentials"}), 401
+        
+        if User.query.filter_by(email=email).first():
+            flash('Email sudah digunakan', 'error')
+            return redirect(url_for('main.register'))
 
-    # Buat JWT token
-    access_token = create_access_token(identity=user.id)
-    return jsonify({"access_token": access_token}), 200
+      
+        user = User(username=username, email=email, role=role)
+        user.set_password(password)  
+        db.session.add(user)
+        db.session.commit()
 
-# Endpoint yang membutuhkan autentikasi
-@main.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    # Mendapatkan user yang sedang login dari JWT token
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    return jsonify({"message": f"Hello, {user.username}!"}), 200
+        flash('Registrasi berhasil! Silakan login.', 'success')
+        return redirect(url_for('main.login')) 
+
+    return render_template('register.html')
+
+@main.route('/dashboard')
+def dashboard():
+    if not is_logged_in():
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('main.login'))
+
+    users = User.query.all()  
+    return render_template('dashboard.html', users=users)
+
+
+@main.route('/add_user', methods=['GET', 'POST'])
+def add_user():
+    if not is_logged_in():
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('main.login'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        role = request.form.get('role')
+
+        if User.query.filter_by(email=email).first():
+            flash('Email sudah digunakan', 'error')
+            return redirect(url_for('main.add_user'))
+
+        user = User(username=username, email=email, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        flash('Pengguna berhasil ditambahkan', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    return render_template('add_user.html')
+
+# Edit Pengguna
+@main.route('/edit_user/<int:id>', methods=['GET', 'POST'])
+def edit_user(id):
+    if not is_logged_in():
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('main.login'))
+
+    user = User.query.get_or_404(id)
+
+    if request.method == 'POST':
+        user.username = request.form.get('username')
+        user.email = request.form.get('email')
+        user.role = request.form.get('role')
+
+        password = request.form.get('password')
+        if password:
+            user.set_password(password)
+
+        db.session.commit()
+        flash('Pengguna berhasil diperbarui', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('edit_user.html', user=user)
+
+# Hapus Pengguna
+@main.route('/delete_user/<int:id>', methods=['GET'])
+def delete_user(id):
+    if not is_logged_in():
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('main.login'))
+
+    user = User.query.get_or_404(id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('Pengguna berhasil dihapus', 'success')
+    return redirect(url_for('main.dashboard'))
+
+# Logout Pengguna
+@main.route('/logout')
+def logout():
+    session.pop('user_id', None)  
+    return redirect(url_for('main.index'))

@@ -1,0 +1,58 @@
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <h1>Dashboard</h1>
+        <h2>Daftar Pengguna</h2>
+        
+        <!-- Menampilkan pesan flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Tabel Daftar Pengguna -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>
+                            <!-- Tombol Edit dan Hapus -->
+                            <div class="action-buttons">
+                                <a href="{{ url_for('main.edit_user', id=user.id) }}" class="edit-btn">Edit</a>
+                                <a href="{{ url_for('main.delete_user', id=user.id) }}" class="delete-btn" onclick="return confirm('Yakin ingin menghapus pengguna ini?')">Hapus</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Tombol Tambah Pengguna dan Logout -->
+        <div class="action-buttons">
+            <a href="{{ url_for('main.add_user') }}" class="add-user-btn">Tambah Pengguna</a>
+            <a href="{{ url_for('main.logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+</body>
